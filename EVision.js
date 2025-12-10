@@ -28,8 +28,9 @@ for (let r = 0; r < 6; r++) {
     for (let c = 0; c < 23; c++) {
         const ledIndex = matrixMap[r][c];
         if (ledIndex !== 255) {
+            const keyName = (ledIndex < vKeyNames.length) ? vKeyNames[ledIndex] : `LED ${ledIndex}`;        
             ledInfos.push({
-                name: `LED ${ledIndex}`,
+                name: keyName,
                 id: ledIndex,
                 position: [c, r],
             });
