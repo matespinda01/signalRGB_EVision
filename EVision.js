@@ -123,9 +123,8 @@ function decodeLigthingMode(mode) {
   }
 }
 function updateStaticColor(r, g, b) {
-    console.log(ControllableParameters());
-    MODE = decodeLigthingMode(ControllableParameters.LightingMode);
-    BRIGHTNESS = decodeBrigghtness(ControllableParameters.Brightness);
+    MODE = decodeLigthingMode(device.parameters.LightingMode);
+    BRIGHTNESS = decodeBrigghtness(device.parameters.Brightness);
     const packet = new Array(64).fill(0);
     packet[0] = REPORT_ID;
 
