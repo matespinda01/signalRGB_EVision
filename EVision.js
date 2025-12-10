@@ -14,6 +14,7 @@ const vKeyNames = [
     "LCtrl", "LWin", "LAlt", "Space", "RAlt", "Fn", "RCtrl", "Left", "Down", "Right", "Num0", "Num."
 ];
 
+// Matrix Map (126 LEDs)
 const matrixMap = [
     [0, 255, 1, 2, 3, 4, 255, 5, 6, 7, 8, 255, 9, 10, 11, 12, 14, 15, 16, 255, 255, 255, 255],
     [21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 255, 32, 33, 34, 255, 35, 36, 37, 38, 39, 40, 41],
@@ -45,24 +46,22 @@ export function LedInfos() {
 const REPORT_ID = 0x04;
 const CMD_SET_PARAM = 0x06;
 const CMD_COLOR_DATA = 0x11;
-const PARAM_MODE = 0x00;
 
-const EVISION_MODE_CUSTOM = 0x01;
-const EVISION_BRIGHTNESS_MAX = 0xFF;
-const EVISION_SPEED_NORMAL = 0x00;
-const EVISION_DIR_LEFT = 0x00;
+const CAPTURED_MODE = 0x14; // 20
+const CAPTURED_BRIGHTNESS = 0x04; // 4
 
 export function Initialize() {
     const modeData = [
-        EVISION_MODE_CUSTOM, 
-        EVISION_BRIGHTNESS_MAX, 
-        EVISION_SPEED_NORMAL, 
-        EVISION_DIR_LEFT, 
+        CAPTURED_MODE,      // 0x14
+        CAPTURED_BRIGHTNESS,// 0x04
+        0x00,               // Speed
+        0x00,               // Direction
         0, 0, 0, 0
     ];
     
-    sendParameter(PARAM_MODE, modeData);
-    device.pause(200);
+    sendParameter(0x00, modeData);
+    
+    device.pause(200); 
 }
 
 export function Render() {
@@ -72,12 +71,14 @@ export function Render() {
     for (const led of ledInfos) {
         const color = device.color(led.position[0], led.position[1]);
         const idx = led.id * 3;
+        
         if (idx + 2 < colorData.length) {
             colorData[idx] = color[0];     // R
             colorData[idx + 1] = color[1]; // G
             colorData[idx + 2] = color[2]; // B
         }
     }
+
     const chunkSize = 54;
     let offset = 0;
 
@@ -96,13 +97,16 @@ export function Shutdown() {
 }
 
 function sendParameter(parameterId, dataBytes) {
-
     const packet = new Array(64).fill(0);
     
-    packet[0] = REPORT_ID;  // 0x04
+    packet[0] = REPORT_ID;
+    // Bytes 1,2 are Checksum
     packet[3] = CMD_SET_PARAM; // 0x06
-    packet[4] = dataBytes.length;
+    packet[4] = dataBytes.length; // 0x08
     packet[5] = parameterId;      // 0x00
+    // Bytes 6,7 are Padding (0x00)
+    
+    // Data starts at byte 8
     for(let i = 0; i < dataBytes.length; i++) {
         packet[8 + i] = dataBytes[i];
     }
@@ -114,12 +118,13 @@ function sendParameter(parameterId, dataBytes) {
 function sendColorData(data, size, offset) {
     const packet = new Array(64).fill(0);
     
-    packet[0] = REPORT_ID; // 0x04
-    // packet[1], packet[2] are Checksum
+    packet[0] = REPORT_ID;
     packet[3] = CMD_COLOR_DATA; // 0x11
     packet[4] = size;
-    packet[5] = offset & 0xFF;        // Offset LSB
-    packet[6] = (offset >> 8) & 0xFF; // Offset MSB
+    packet[5] = offset & 0xFF;
+    packet[6] = (offset >> 8) & 0xFF;
+    // Byte 7 is Padding (0x00)
+
     for(let i = 0; i < size; i++) {
         packet[8 + i] = data[i];
     }
@@ -130,6 +135,7 @@ function sendColorData(data, size, offset) {
 
 function addChecksum(packet) {
     let checksum = 0;
+    // Sum bytes 3 to 63
     for (let i = 3; i < 64; i++) {
         checksum += packet[i];
     }
@@ -139,5 +145,6 @@ function addChecksum(packet) {
 }
 
 export function Validate(endpoint) {
+    // Must target Interface 1, Usage Page 0xFF1C
     return endpoint.interface === 1 && endpoint.usage_page === 0xff1c;
 }
