@@ -50,15 +50,13 @@ export function LedInfos() {
 
 const REPORT_ID = 0x04;
 const CMD_SET_PARAM = 0x06;
-let MODE = null;
+let MODE = 0x06;
 let BRIGHTNESS = 0x04; 
 
 let lastR = -1, lastG = -1, lastB = -1;
 let lastUpdateTime = 0;
 
 export function Initialize() {
-    MODE = decodeLigthingMode(device.parameters.LightingMode);
-    BRIGHTNESS = decodeBrigghtness(device.parameters.Brightness);
     updateStaticColor(0, 0, 0);
 }
 
@@ -122,6 +120,12 @@ function decodeLigthingMode(mode) {
   }
 }
 function updateStaticColor(r, g, b) {
+
+    const params = device.parameters;
+    if (!params) return;
+    console.log(params,params.LightingMode,params.Brightness);
+    MODE = decodeLigthingMode(params.LightingMode);
+    BRIGHTNESS = decodeBrigghtness(params.Brightness);
     const packet = new Array(64).fill(0);
     packet[0] = REPORT_ID;
 
