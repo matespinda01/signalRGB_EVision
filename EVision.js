@@ -4,6 +4,12 @@ export function ProductId() { return 0x5004; }
 export function Publisher() { return "SignalRGB"; }
 export function Size() { return [23, 6]; }
 export const Type = "Hid";
+export function ControllableParameters(){
+    return [
+        {"property":"LightingMode", "label":"Lighting Mode", "type":"combobox", "values":["Custom","Color Wave","Color Wave (Short)","Color Wheel","Spectrum Cycle","Breathing","Hurricane","Accumulate","Starlight","Visor","Static","Rainbow Circle","Vertical Rainbow","Blooming","Reactive","Reactive Ripple","Reactive Light"], "default":"Static"},
+        {"property":"Brightness", "label":"Brightness","min":"0","max":"100","type":"number","default":"50","step":"1"},
+    ];
+}
 
 const vKeyNames = [
     "Esc", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12", "PrtSc", "ScrLk", "Pause",
@@ -44,13 +50,15 @@ export function LedInfos() {
 
 const REPORT_ID = 0x04;
 const CMD_SET_PARAM = 0x06;
-const MODE_STATIC = 0x06; 
-const BRIGHTNESS = 0x04; 
+let MODE = null;
+let BRIGHTNESS = 0x04; 
 
 let lastR = -1, lastG = -1, lastB = -1;
 let lastUpdateTime = 0;
 
 export function Initialize() {
+
+    
     updateStaticColor(0, 0, 0);
 }
 
@@ -69,6 +77,7 @@ export function Render() {
 
 
     if (r !== lastR || g !== lastG || b !== lastB) {
+
         updateStaticColor(r, g, b);
         
         lastR = r;
@@ -81,8 +90,40 @@ export function Render() {
 export function Shutdown() {
 }
 
-function updateStaticColor(r, g, b) {
 
+function decodeBrigghtness(in_brightness) {
+    let value = in_brightness;
+    if (value > 100) value = 100;
+    if (value < 0) value = 0;
+    let mapped = Math.round((value / 100) * 4);
+        return mapped;
+}
+function decodeLigthingMode(modeStr) {
+  switch (mode) {
+    case "Custom": return 0x14;
+    case "Color Wave": return 0x02;
+    case "Color Wave (Short)": return 0x01;
+    case "Color Wheel": return 0x03;
+    case "Spectrum Cycle": return 0x04;
+    case "Breathing": return 0x05;
+    case "Hurricane": return 0x0d;
+    case "Accumulate": return 0x0e;
+    case "Starlight": return 0x0a;
+    case "Visor": return 0x10;
+    case "Static": return 0x06;
+    case "Rainbow Circle": return 0x12;
+    case "Vertical Rainbow": return 0x0c;
+    case "Blooming": return 0x0b;
+    case "Reactive": return 0x07;
+    case "Reactive Ripple": return 0x08;
+    case "Reactive Light": return 0x09;
+    default:
+      throw new Error(`Unknown mode: ${mode}`);
+  }
+}
+function updateStaticColor(r, g, b) {
+    MODE = decodeLigthingMode(ControllableParameters.LightingMode);
+    BRIGHTNESS = decodeBrigghtness(ControllableParameters.Brightness);
     const packet = new Array(64).fill(0);
     packet[0] = REPORT_ID;
 
@@ -92,7 +133,7 @@ function updateStaticColor(r, g, b) {
     // 6, 7 Padding
     
     // Data Payload
-    packet[8] = MODE_STATIC;   // 0x06
+    packet[8] = MODE;   // 0x06
     packet[9] = BRIGHTNESS;    // 0x04
     packet[10] = 0x00;         // Speed
     packet[11] = 0x00;         // Direction
