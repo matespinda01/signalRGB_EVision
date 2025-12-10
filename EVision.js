@@ -91,10 +91,9 @@ export function Shutdown() {
 
 function decodeBrigghtness(in_brightness) {
     let value = in_brightness;
-    if (value > 100) value = 100;
+    if (value > 4) value = 4;
     if (value < 0) value = 0;
-    let mapped = Math.round((value / 100) * 4);
-        return mapped;
+    return value;
 }
 function decodeLigthingMode(mode) {
   switch (mode) {
