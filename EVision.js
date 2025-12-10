@@ -46,16 +46,17 @@ const REPORT_ID = 0x04;
 const CMD_SET_PARAM = 0x06;
 const CMD_COLOR_DATA = 0x11;
 
-const MODE_DIRECT = 0x01; 
-const BRIGHTNESS_MAX = 0xFF; 
+
+const CAPTURED_MODE = 0x14; 
+const CAPTURED_BRIGHTNESS = 0x04; 
 
 let previousColorData = new Uint8Array(126 * 3).fill(0);
 let lastUpdateTime = 0;
 
 export function Initialize() {
     const modeData = [
-        MODE_DIRECT,      
-        BRIGHTNESS_MAX,   // Using 0xFF instead of 0x04
+        CAPTURED_MODE,      
+        CAPTURED_BRIGHTNESS,
         0x00,               
         0x00,               
         0, 0, 0, 0
@@ -66,14 +67,16 @@ export function Initialize() {
 }
 
 export function Render() {
+
     const now = Date.now();
-    if (now - lastUpdateTime < 33) {
+    if (now - lastUpdateTime < 33) { // 30 FPS Limit
         return;
     }
 
     const totalLeds = 126;
     const colorData = new Uint8Array(totalLeds * 3).fill(0);
     let dirty = false;
+
 
     for (const led of ledInfos) {
         const color = device.color(led.position[0], led.position[1]);
@@ -84,6 +87,7 @@ export function Render() {
             colorData[idx + 1] = color[1]; 
             colorData[idx + 2] = color[2];
             
+
             if (previousColorData[idx] !== color[0] || 
                 previousColorData[idx+1] !== color[1] || 
                 previousColorData[idx+2] !== color[2]) {
@@ -96,6 +100,7 @@ export function Render() {
         return;
     }
 
+    // 4. Update cache and send
     previousColorData.set(colorData);
     lastUpdateTime = now;
 
@@ -108,14 +113,14 @@ export function Render() {
 
         const chunk = colorData.slice(offset, offset + size);
         sendColorData(chunk, size, offset);
-        device.pause(2);
+
+        device.pause(15);
 
         offset += size;
     }
 }
 
 export function Shutdown() {
-    
 }
 
 function sendParameter(parameterId, dataBytes) {
