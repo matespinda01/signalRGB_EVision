@@ -44,104 +44,65 @@ export function LedInfos() {
 
 const REPORT_ID = 0x04;
 const CMD_SET_PARAM = 0x06;
-const CMD_COLOR_DATA = 0x11;
+const MODE_STATIC = 0x06; 
+const BRIGHTNESS = 0x04; 
 
-const CAPTURED_MODE = 0x14; 
-const CAPTURED_BRIGHTNESS = 0x04; 
-
-let previousColorData = new Uint8Array(126 * 3).fill(0);
+let lastR = -1, lastG = -1, lastB = -1;
 let lastUpdateTime = 0;
 
 export function Initialize() {
-    const modeData = [
-        CAPTURED_MODE,      
-        CAPTURED_BRIGHTNESS,
-        0x00,               
-        0x00,               
-        0, 0, 0, 0
-    ];
-    
-    sendParameter(0x00, modeData);
-    device.pause(200); 
+    updateStaticColor(0, 0, 0);
 }
 
 export function Render() {
- 
+
     const now = Date.now();
-    if (now - lastUpdateTime < 50) { 
+    if (now - lastUpdateTime < 33) {
         return;
     }
 
-    const totalLeds = 126;
-    const colorData = new Uint8Array(totalLeds * 3).fill(0);
-    let dirty = false;
+
+    const color = device.color(11, 2);
+    const r = color[0];
+    const g = color[1];
+    const b = color[2];
 
 
-    for (const led of ledInfos) {
-        const color = device.color(led.position[0], led.position[1]);
-        const idx = led.id * 3;
+    if (r !== lastR || g !== lastG || b !== lastB) {
+        updateStaticColor(r, g, b);
         
-        if (idx + 2 < colorData.length) {
-            colorData[idx] = color[0];     
-            colorData[idx + 1] = color[1]; 
-            colorData[idx + 2] = color[2];
-            
-            if (previousColorData[idx] !== color[0] || 
-                previousColorData[idx+1] !== color[1] || 
-                previousColorData[idx+2] !== color[2]) {
-                dirty = true;
-            }
-        }
-    }
-    if (!dirty) {
-        return;
-    }
-
-    previousColorData.set(colorData);
-    lastUpdateTime = now;
-
-    const chunkSize = 54;
-    let offset = 0;
-
-    while (offset < colorData.length) {
-        let size = colorData.length - offset;
-        if (size > chunkSize) size = chunkSize;
-
-        const chunk = colorData.slice(offset, offset + size);
-        sendColorData(chunk, size, offset);
-        
-        offset += size;
+        lastR = r;
+        lastG = g;
+        lastB = b;
+        lastUpdateTime = now;
     }
 }
 
 export function Shutdown() {
 }
 
-function sendParameter(parameterId, dataBytes) {
-    const packet = new Array(64).fill(0);
-    packet[0] = REPORT_ID; 
-    packet[3] = CMD_SET_PARAM; 
-    packet[4] = dataBytes.length; 
-    packet[5] = parameterId; 
-    
-    for(let i = 0; i < dataBytes.length; i++) {
-        packet[8 + i] = dataBytes[i];
-    }
-    addChecksum(packet);
-    device.write(packet, 64);
-}
+function updateStaticColor(r, g, b) {
 
-function sendColorData(data, size, offset) {
     const packet = new Array(64).fill(0);
-    packet[0] = REPORT_ID; 
-    packet[3] = CMD_COLOR_DATA; 
-    packet[4] = size;
-    packet[5] = offset & 0xFF;
-    packet[6] = (offset >> 8) & 0xFF;
+    packet[0] = REPORT_ID;
+
+    packet[3] = CMD_SET_PARAM; // 0x06
+    packet[4] = 0x08;          // Length
+    packet[5] = 0x00;          // Param ID
+    // 6, 7 Padding
     
-    for(let i = 0; i < size; i++) {
-        packet[8 + i] = data[i];
-    }
+    // Data Payload
+    packet[8] = MODE_STATIC;   // 0x06
+    packet[9] = BRIGHTNESS;    // 0x04
+    packet[10] = 0x00;         // Speed
+    packet[11] = 0x00;         // Direction
+    packet[12] = 0x00;         // Random
+    
+  
+    packet[13] = g; // Green
+    packet[14] = r; // Red
+    packet[15] = b; // Blue
+
     addChecksum(packet);
     device.write(packet, 64);
 }
