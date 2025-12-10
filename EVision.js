@@ -47,15 +47,15 @@ const REPORT_ID = 0x04;
 const CMD_SET_PARAM = 0x06;
 const CMD_COLOR_DATA = 0x11;
 
-const CAPTURED_MODE = 0x14; // 20
-const CAPTURED_BRIGHTNESS = 0x04; // 4
+const CAPTURED_MODE = 0x14;
+const CAPTURED_BRIGHTNESS = 0x04;
 
 export function Initialize() {
     const modeData = [
-        CAPTURED_MODE,      // 0x14
-        CAPTURED_BRIGHTNESS,// 0x04
-        0x00,               // Speed
-        0x00,               // Direction
+        CAPTURED_MODE,      
+        CAPTURED_BRIGHTNESS,
+        0x00,               
+        0x00,               
         0, 0, 0, 0
     ];
     
@@ -73,9 +73,9 @@ export function Render() {
         const idx = led.id * 3;
         
         if (idx + 2 < colorData.length) {
-            colorData[idx] = color[0];     // R
-            colorData[idx + 1] = color[1]; // G
-            colorData[idx + 2] = color[2]; // B
+            colorData[idx] = color[0];     
+            colorData[idx + 1] = color[1]; 
+            colorData[idx + 2] = color[2]; 
         }
     }
 
@@ -97,54 +97,56 @@ export function Shutdown() {
 }
 
 function sendParameter(parameterId, dataBytes) {
-    const packet = new Array(64).fill(0);
+    // 65 Bytes total: [0x00, 0x04, CS_L, CS_H, CMD, LEN, PARAM, PAD, PAD, DATA...]
+    const packet = new Array(65).fill(0);
     
-    packet[0] = REPORT_ID;
-    // Bytes 1,2 are Checksum
-    packet[3] = CMD_SET_PARAM; // 0x06
-    packet[4] = dataBytes.length; // 0x08
-    packet[5] = parameterId;      // 0x00
-    // Bytes 6,7 are Padding (0x00)
+    packet[0] = 0x00; // HID Report ID (Consumed by OS)
+    packet[1] = REPORT_ID; // 0x04 - Becomes Byte 0 on Wire
+    // packet[2], packet[3] are Checksum
+    packet[4] = CMD_SET_PARAM; // 0x06
+    packet[5] = dataBytes.length; // 0x08
+    packet[6] = parameterId;      // 0x00
     
-    // Data starts at byte 8
+    // Data starts at packet[9]
     for(let i = 0; i < dataBytes.length; i++) {
-        packet[8 + i] = dataBytes[i];
+        packet[9 + i] = dataBytes[i];
     }
 
     addChecksum(packet);
-    device.send_report(packet, 64);
+    device.write(packet, 65);
 }
 
 function sendColorData(data, size, offset) {
-    const packet = new Array(64).fill(0);
+    const packet = new Array(65).fill(0);
     
-    packet[0] = REPORT_ID;
-    packet[3] = CMD_COLOR_DATA; // 0x11
-    packet[4] = size;
-    packet[5] = offset & 0xFF;
-    packet[6] = (offset >> 8) & 0xFF;
-    // Byte 7 is Padding (0x00)
-
+    packet[0] = 0x00; // HID Report ID
+    packet[1] = REPORT_ID; // 0x04
+    // packet[2], packet[3] Checksum
+    packet[4] = CMD_COLOR_DATA; // 0x11
+    packet[5] = size;
+    packet[6] = offset & 0xFF;
+    packet[7] = (offset >> 8) & 0xFF;
+    
+    // Data starts at packet[9]
     for(let i = 0; i < size; i++) {
-        packet[8 + i] = data[i];
+        packet[9 + i] = data[i];
     }
 
     addChecksum(packet);
-    device.send_report(packet, 64);
+    device.write(packet, 65);
 }
 
 function addChecksum(packet) {
     let checksum = 0;
-    // Sum bytes 3 to 63
-    for (let i = 3; i < 64; i++) {
+    // Sum bytes 4 to 64 (which corresponds to bytes 3-63 on the wire)
+    for (let i = 4; i < 65; i++) {
         checksum += packet[i];
     }
     
-    packet[1] = checksum & 0xFF;
-    packet[2] = (checksum >> 8) & 0xFF;
+    packet[2] = checksum & 0xFF;
+    packet[3] = (checksum >> 8) & 0xFF;
 }
 
 export function Validate(endpoint) {
-    // Must target Interface 1, Usage Page 0xFF1C
     return endpoint.interface === 1 && endpoint.usage_page === 0xff1c;
 }
