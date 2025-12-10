@@ -58,7 +58,8 @@ let lastUpdateTime = 0;
 
 export function Initialize() {
 
-    
+    MODE = decodeLigthingMode(ControllableParameters.LightingMode);
+    BRIGHTNESS = decodeBrigghtness(ControllableParameters.Brightness);
     updateStaticColor(0, 0, 0);
 }
 
