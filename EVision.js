@@ -3,7 +3,7 @@ export function VendorId() { return 0x0c45; }
 export function ProductId() { return 0x5004; }
 export function Publisher() { return "SignalRGB"; }
 export function Size() { return [23, 6]; }
-export function Type() { return "Hid"; }
+export const Type = "Hid";
 
 const vKeyNames = [
     "Esc", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12", "PrtSc", "ScrLk", "Pause",
@@ -28,7 +28,7 @@ for (let r = 0; r < 6; r++) {
     for (let c = 0; c < 23; c++) {
         const ledIndex = matrixMap[r][c];
         if (ledIndex !== 255) {
-            const keyName = (ledIndex < vKeyNames.length) ? vKeyNames[ledIndex] : `LED ${ledIndex}`;        
+            const keyName = (ledIndex < vKeyNames.length) ? vKeyNames[ledIndex] : `LED ${ledIndex}`;
             ledInfos.push({
                 name: keyName,
                 id: ledIndex,
@@ -42,34 +42,42 @@ export function LedInfos() {
     return ledInfos;
 }
 
+const REPORT_ID = 0x04;
 const CMD_SET_PARAM = 0x06;
 const CMD_COLOR_DATA = 0x11;
-const PARAM_MODE_EX = 0x00;
+const PARAM_MODE = 0x00;
 
-const MODE_CUSTOM = 0x01;
-const BRIGHTNESS_MAX = 0xFF;
-const SPEED_NORMAL = 0x00;
-const DIR_LEFT = 0x00;
+const EVISION_MODE_CUSTOM = 0x01;
+const EVISION_BRIGHTNESS_MAX = 0xFF;
+const EVISION_SPEED_NORMAL = 0x00;
+const EVISION_DIR_LEFT = 0x00;
 
 export function Initialize() {
-    const modeData = [MODE_CUSTOM, BRIGHTNESS_MAX, SPEED_NORMAL, DIR_LEFT, 0, 0, 0, 0];
-    sendParameter(PARAM_MODE_EX, modeData);
+    const modeData = [
+        EVISION_MODE_CUSTOM, 
+        EVISION_BRIGHTNESS_MAX, 
+        EVISION_SPEED_NORMAL, 
+        EVISION_DIR_LEFT, 
+        0, 0, 0, 0
+    ];
+    
+    sendParameter(PARAM_MODE, modeData);
+    device.pause(200);
 }
 
 export function Render() {
-    // 126 LEDs * 3 bytes = 378 bytes
     const totalLeds = 126;
-    const colorData = new Uint8Array(totalLeds * 3);
+    const colorData = new Uint8Array(totalLeds * 3).fill(0);
 
     for (const led of ledInfos) {
         const color = device.color(led.position[0], led.position[1]);
         const idx = led.id * 3;
-        colorData[idx] = color[0];     // R
-        colorData[idx + 1] = color[1]; // G
-        colorData[idx + 2] = color[2]; // B
+        if (idx + 2 < colorData.length) {
+            colorData[idx] = color[0];     // R
+            colorData[idx + 1] = color[1]; // G
+            colorData[idx + 2] = color[2]; // B
+        }
     }
-
-    // Send in chunks of 54 bytes (0x36)
     const chunkSize = 54;
     let offset = 0;
 
@@ -85,34 +93,33 @@ export function Render() {
 }
 
 export function Shutdown() {
-    // Optional: Revert to Hardware Mode
 }
 
 function sendParameter(parameterId, dataBytes) {
-    const packet = new Array(64).fill(0);
-    packet[0] = 0x04; // Report ID
-    packet[3] = CMD_SET_PARAM;
-    packet[4] = dataBytes.length; 
-    packet[5] = parameterId; 
 
+    const packet = new Array(64).fill(0);
+    
+    packet[0] = REPORT_ID;  // 0x04
+    packet[3] = CMD_SET_PARAM; // 0x06
+    packet[4] = dataBytes.length;
+    packet[5] = parameterId;      // 0x00
     for(let i = 0; i < dataBytes.length; i++) {
         packet[8 + i] = dataBytes[i];
     }
 
     addChecksum(packet);
-    
-    // We expect this to use Output Report because we selected Interface 1
     device.send_report(packet, 64);
 }
 
 function sendColorData(data, size, offset) {
     const packet = new Array(64).fill(0);
-    packet[0] = 0x04; // Report ID
-    packet[3] = CMD_COLOR_DATA;
+    
+    packet[0] = REPORT_ID; // 0x04
+    // packet[1], packet[2] are Checksum
+    packet[3] = CMD_COLOR_DATA; // 0x11
     packet[4] = size;
-    packet[5] = offset & 0xFF;
-    packet[6] = (offset >> 8) & 0xFF;
-
+    packet[5] = offset & 0xFF;        // Offset LSB
+    packet[6] = (offset >> 8) & 0xFF; // Offset MSB
     for(let i = 0; i < size; i++) {
         packet[8 + i] = data[i];
     }
@@ -123,7 +130,6 @@ function sendColorData(data, size, offset) {
 
 function addChecksum(packet) {
     let checksum = 0;
-    // Checksum from byte 3 to 63
     for (let i = 3; i < 64; i++) {
         checksum += packet[i];
     }
