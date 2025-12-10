@@ -46,35 +46,26 @@ const REPORT_ID = 0x04;
 const CMD_SET_PARAM = 0x06;
 const CMD_COLOR_DATA = 0x11;
 
-const CAPTURED_MODE = 0x14; 
-const CAPTURED_BRIGHTNESS = 0x04; 
-
-let lastFrameTime = 0;
-let forcedRefreshCount = 0;
-let previousColorData = new Uint8Array(126 * 3).fill(0);
+const MODE_DIRECT = 0x01; 
+const BRIGHTNESS = 0x04; 
 
 export function Initialize() {
     const modeData = [
-        CAPTURED_MODE,      
-        CAPTURED_BRIGHTNESS,
+        MODE_DIRECT,      
+        BRIGHTNESS,
         0x00,               
         0x00,               
         0, 0, 0, 0
     ];
     
     sendParameter(0x00, modeData);
+    
     device.pause(200); 
 }
 
 export function Render() {
-    const now = Date.now();
-    if (now - lastFrameTime < 100) {
-        return;
-    }
-
     const totalLeds = 126;
     const colorData = new Uint8Array(totalLeds * 3).fill(0);
-    let dirty = false;
 
     for (const led of ledInfos) {
         const color = device.color(led.position[0], led.position[1]);
@@ -83,27 +74,9 @@ export function Render() {
         if (idx + 2 < colorData.length) {
             colorData[idx] = color[0];     
             colorData[idx + 1] = color[1]; 
-            colorData[idx + 2] = color[2];
-            
-            if (previousColorData[idx] !== color[0] || 
-                previousColorData[idx+1] !== color[1] || 
-                previousColorData[idx+2] !== color[2]) {
-                dirty = true;
-            }
+            colorData[idx + 2] = color[2]; 
         }
     }
-    forcedRefreshCount++;
-    if (forcedRefreshCount > 20) {
-        dirty = true;
-        forcedRefreshCount = 0;
-    }
-
-    if (!dirty) {
-        return;
-    }
-
-    previousColorData.set(colorData);
-    lastFrameTime = now;
 
     const chunkSize = 54;
     let offset = 0;
@@ -114,9 +87,7 @@ export function Render() {
 
         const chunk = colorData.slice(offset, offset + size);
         sendColorData(chunk, size, offset);
-
-        device.pause(15);
-
+        
         offset += size;
     }
 }
@@ -126,7 +97,7 @@ export function Shutdown() {
 
 function sendParameter(parameterId, dataBytes) {
     const packet = new Array(64).fill(0);
-    packet[0] = REPORT_ID; 
+    packet[0] = REPORT_ID; // 0x04
     packet[3] = CMD_SET_PARAM; 
     packet[4] = dataBytes.length; 
     packet[5] = parameterId; 
