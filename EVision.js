@@ -123,7 +123,7 @@ function decodeLigthingMode(mode) {
   }
 }
 function updateStaticColor(r, g, b) {
-    console.log(ControllableParameters.LightingMode);
+    console.log(ControllableParameters().LightingMode);
     MODE = decodeLigthingMode(ControllableParameters.LightingMode);
     BRIGHTNESS = decodeBrigghtness(ControllableParameters.Brightness);
     const packet = new Array(64).fill(0);
