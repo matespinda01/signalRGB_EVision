@@ -48,7 +48,7 @@ const CMD_SET_PARAM = 0x06;
 const CMD_COLOR_DATA = 0x11;
 
 
-const CAPTURED_MODE = 0x14;
+const CAPTURED_MODE = 0x01;
 const CAPTURED_BRIGHTNESS = 0x04;
 
 export function Initialize() {
@@ -87,7 +87,7 @@ export function Render() {
 
         const chunk = colorData.slice(offset, offset + size);
         sendColorData(chunk, size, offset);
-        
+        device.pause(1);
         offset += size;
     }
 }
