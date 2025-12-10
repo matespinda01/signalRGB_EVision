@@ -2,7 +2,7 @@ export function Name() { return "EVision/Sonix Keyboard"; }
 export function VendorId() { return 0x0c45; }
 export function ProductId() { return 0x5004; }
 export function Publisher() { return "SignalRGB"; }
-export function Size() { return [23, 6]; } // Based on the OpenRGB Matrix 23x6
+export function Size() { return [23, 6]; }
 export function Type() { return "Hid"; }
 
 const vKeyNames = [
@@ -14,8 +14,6 @@ const vKeyNames = [
     "LCtrl", "LWin", "LAlt", "Space", "RAlt", "Fn", "RCtrl", "Left", "Down", "Right", "Num0", "Num."
 ];
 
-// Matrix Map from RGBController_EVisionKeyboard.cpp
-// 0xFF (255) represents NA
 const matrixMap = [
     [0, 255, 1, 2, 3, 4, 255, 5, 6, 7, 8, 255, 9, 10, 11, 12, 14, 15, 16, 255, 255, 255, 255],
     [21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 255, 32, 33, 34, 255, 35, 36, 37, 38, 39, 40, 41],
@@ -26,7 +24,6 @@ const matrixMap = [
 ];
 
 const ledInfos = [];
-// Flatten the map to generate ledInfos
 for (let r = 0; r < 6; r++) {
     for (let c = 0; c < 23; c++) {
         const ledIndex = matrixMap[r][c];
@@ -44,19 +41,16 @@ export function LedInfos() {
     return ledInfos;
 }
 
-const CMD_COLOR_DATA = 0x11;
 const CMD_SET_PARAM = 0x06;
+const CMD_COLOR_DATA = 0x11;
 const PARAM_MODE_EX = 0x00;
 
-// Mode Constants
-const MODE_CUSTOM = 0x01; // Assumed Custom Mode
+const MODE_CUSTOM = 0x01;
 const BRIGHTNESS_MAX = 0xFF;
-const SPEED_NORMAL = 0x00; // Guessing default speed
+const SPEED_NORMAL = 0x00;
 const DIR_LEFT = 0x00;
 
 export function Initialize() {
-    // Set Custom Mode
-    // Data: [Mode, Brightness, Speed, Direction, Random(0), R(0), G(0), B(0)]
     const modeData = [MODE_CUSTOM, BRIGHTNESS_MAX, SPEED_NORMAL, DIR_LEFT, 0, 0, 0, 0];
     sendParameter(PARAM_MODE_EX, modeData);
 }
@@ -66,8 +60,6 @@ export function Render() {
     const totalLeds = 126;
     const colorData = new Uint8Array(totalLeds * 3);
 
-    // Populate color array based on LedInfos
-    // We iterate through our defined LEDs and grab the color from the SignalRGB device
     for (const led of ledInfos) {
         const color = device.color(led.position[0], led.position[1]);
         const idx = led.id * 3;
@@ -77,7 +69,6 @@ export function Render() {
     }
 
     // Send in chunks of 54 bytes (0x36)
-    // 378 / 54 = 7 Packets
     const chunkSize = 54;
     let offset = 0;
 
@@ -93,42 +84,34 @@ export function Render() {
 }
 
 export function Shutdown() {
-    // Optional: Revert to rainbow or hardware mode
-    // const modeData = [0x02, BRIGHTNESS_MAX, SPEED_NORMAL, DIR_LEFT, 0, 0, 0, 0]; // 0x02 might be wave
-    // sendParameter(PARAM_MODE_EX, modeData);
+    // Optional: Revert to Hardware Mode
 }
 
-/**
- * Sends a Parameter Packet (Cmd 0x06)
- */
 function sendParameter(parameterId, dataBytes) {
     const packet = new Array(64).fill(0);
-    packet[0] = 0x04;
+    packet[0] = 0x04; // Report ID
     packet[3] = CMD_SET_PARAM;
-    packet[4] = dataBytes.length; // Parameter Size
-    packet[5] = parameterId;      // Parameter ID
-    
-    // Copy data starting at index 8
+    packet[4] = dataBytes.length; 
+    packet[5] = parameterId; 
+
     for(let i = 0; i < dataBytes.length; i++) {
         packet[8 + i] = dataBytes[i];
     }
 
     addChecksum(packet);
+    
+    // We expect this to use Output Report because we selected Interface 1
     device.send_report(packet, 64);
 }
 
-/**
- * Sends a Color Data Packet (Cmd 0x11)
- */
 function sendColorData(data, size, offset) {
     const packet = new Array(64).fill(0);
-    packet[0] = 0x04;
+    packet[0] = 0x04; // Report ID
     packet[3] = CMD_COLOR_DATA;
     packet[4] = size;
     packet[5] = offset & 0xFF;
     packet[6] = (offset >> 8) & 0xFF;
 
-    // Copy data starting at index 8
     for(let i = 0; i < size; i++) {
         packet[8 + i] = data[i];
     }
@@ -137,13 +120,9 @@ function sendColorData(data, size, offset) {
     device.send_report(packet, 64);
 }
 
-/**
- * Calculates and adds checksum to the packet
- * Checksum is sum of bytes 3 to 63
- * Stored in bytes 1 (LSB) and 2 (MSB)
- */
 function addChecksum(packet) {
     let checksum = 0;
+    // Checksum from byte 3 to 63
     for (let i = 3; i < 64; i++) {
         checksum += packet[i];
     }
@@ -153,5 +132,5 @@ function addChecksum(packet) {
 }
 
 export function Validate(endpoint) {
-    return endpoint.interface === 1 || endpoint.interface === 0; // Usually Interface 1 for Hid RGB
+    return endpoint.interface === 1;
 }
