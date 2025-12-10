@@ -7,7 +7,7 @@ export const Type = "Hid";
 export function ControllableParameters(){
     return [
         {"property":"LightingMode", "label":"Lighting Mode", "type":"combobox", "values":["Custom","Color Wave","Color Wave (Short)","Color Wheel","Spectrum Cycle","Breathing","Hurricane","Accumulate","Starlight","Visor","Static","Rainbow Circle","Vertical Rainbow","Blooming","Reactive","Reactive Ripple","Reactive Light"], "default":"Static"},
-        {"property":"Brightness", "label":"Brightness","min":"0","max":"100","type":"number","default":"50","step":"1"},
+        {"property":"Brightness", "label":"Brightness","min":"0","max":"4","type":"number","default":"2","step":"1"},
     ];
 }
 
