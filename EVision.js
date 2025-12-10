@@ -99,10 +99,9 @@ function updateStaticColor(r, g, b) {
     packet[12] = 0x00;         // Random
     
   
-    packet[13] = r; // Green
-    packet[14] = b; // Red
-    packet[15] = g; // Blue
-
+    packet[13] = r;
+    packet[14] = g;
+    packet[15] = b; 
     addChecksum(packet);
     device.write(packet, 64);
 }
