@@ -99,7 +99,7 @@ function decodeBrigghtness(in_brightness) {
     let mapped = Math.round((value / 100) * 4);
         return mapped;
 }
-function decodeLigthingMode(modeStr) {
+function decodeLigthingMode(mode) {
   switch (mode) {
     case "Custom": return 0x14;
     case "Color Wave": return 0x02;
