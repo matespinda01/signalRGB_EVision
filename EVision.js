@@ -46,7 +46,6 @@ const REPORT_ID = 0x04;
 const CMD_SET_PARAM = 0x06;
 const CMD_COLOR_DATA = 0x11;
 
-
 const CAPTURED_MODE = 0x14; 
 const CAPTURED_BRIGHTNESS = 0x04; 
 
@@ -67,9 +66,9 @@ export function Initialize() {
 }
 
 export function Render() {
-
+ 
     const now = Date.now();
-    if (now - lastUpdateTime < 33) { // 30 FPS Limit
+    if (now - lastUpdateTime < 50) { 
         return;
     }
 
@@ -87,7 +86,6 @@ export function Render() {
             colorData[idx + 1] = color[1]; 
             colorData[idx + 2] = color[2];
             
-
             if (previousColorData[idx] !== color[0] || 
                 previousColorData[idx+1] !== color[1] || 
                 previousColorData[idx+2] !== color[2]) {
@@ -95,12 +93,10 @@ export function Render() {
             }
         }
     }
-
     if (!dirty) {
         return;
     }
 
-    // 4. Update cache and send
     previousColorData.set(colorData);
     lastUpdateTime = now;
 
@@ -113,9 +109,7 @@ export function Render() {
 
         const chunk = colorData.slice(offset, offset + size);
         sendColorData(chunk, size, offset);
-
-        device.pause(15);
-
+        
         offset += size;
     }
 }
