@@ -61,8 +61,6 @@ export function Initialize() {
     ];
     
     sendParameter(0x00, modeData);
-    
-    device.pause(200); 
 }
 
 export function Render() {
