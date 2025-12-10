@@ -57,8 +57,8 @@ let lastR = -1, lastG = -1, lastB = -1;
 let lastUpdateTime = 0;
 
 export function Initialize() {
-    MODE = decodeLigthingMode(device.property.LightingMode);
-    BRIGHTNESS = decodeBrigghtness(device.property.Brightness);
+    MODE = decodeLigthingMode(device.parameters.LightingMode);
+    BRIGHTNESS = decodeBrigghtness(device.parameters.Brightness);
     updateStaticColor(0, 0, 0);
 }
 
