@@ -154,5 +154,5 @@ function addChecksum(packet) {
 }
 
 export function Validate(endpoint) {
-    return endpoint.interface === 1 && endpoint.usage_page === 0xff1c;
+     return endpoint.interface === 0 && endpoint.usage_page === 0x01;
 }
