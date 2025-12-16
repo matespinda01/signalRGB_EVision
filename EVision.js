@@ -1,6 +1,6 @@
 export function Name() { return "EVision/Sonix Keyboard"; }
 export function VendorId() { return 0x0c45; }
-export function ProductId() { return 0x50f4; }
+export function ProductId() { return 0x5004; }
 export function Publisher() { return "SignalRGB"; }
 export function Size() { return [23, 6]; }
 export const Type = "Hid";
